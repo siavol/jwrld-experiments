@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: spring-boot-kotlin
+  name: spring-boot-kotlin
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: spring-boot-kotlin
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: spring-boot-kotlin
+    spec:
+      containers:
+      - image: spring-boot-kotlin:0.0.1-SNAPSHOT
+        name: spring-boot-kotlin
+        resources: {}
+        imagePullPolicy: Never
+status: {}
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    app: spring-boot-kotlin
+  name: spring-boot-kotlin
+spec:
+  ports:
+  - name: 8080-8080
+    port: 8080
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: spring-boot-kotlin
+  type: ClusterIP
+status:
+  loadBalancer: {}
