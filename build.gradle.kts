@@ -7,6 +7,7 @@ plugins {
     kotlin("plugin.spring") version "1.8.22"
     kotlin("plugin.allopen") version "1.8.22"
     kotlin("plugin.jpa") version "1.8.22"
+    kotlin("kapt") version "1.8.22"
 }
 
 group = "me.siavol"
@@ -27,9 +28,16 @@ dependencies {
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
+    kapt("org.springframework.boot:spring-boot-configuration-processor")
     runtimeOnly("com.h2database:h2")
     runtimeOnly("org.springframework.boot:spring-boot-devtools")
-    testImplementation("org.springframework.boot:spring-boot-starter-test")
+
+    testImplementation("org.springframework.boot:spring-boot-starter-test") {
+        exclude(module = "mockito-core")
+    }
+    testImplementation("org.junit.jupiter:junit-jupiter-api")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
+    testImplementation("com.ninja-squad:springmockk:4.0.0")
 }
 
 allOpen {
