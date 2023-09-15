@@ -3,6 +3,7 @@
 Built with articles:
 - https://spring.io/guides/tutorials/spring-boot-kotlin/
 - https://spring.io/guides/gs/spring-boot-kubernetes/
+- https://spring.io/guides/topicals/spring-on-kubernetes/
 
 Run in kube:
 1. Run minukube
