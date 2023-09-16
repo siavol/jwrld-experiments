@@ -19,6 +19,34 @@ Kubernetes cluster, f.e. minikube:
 
 Helm.
 
+## Setup Observability
+
+### Optional. cert-manager
+
+When running on specific Kubernetes like minikube
+you may need to install 
+[cert-manager](https://cert-manager.io/docs/installation/)
+before Jaeger.
+
+1. install cert-manager
+   ```shell
+   kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.yaml
+   ```
+2. wait for cert-manager installation
+   ```shell
+   kubectl get pods -n cert-manager
+   ```
+   
+### Jaeger
+
+See official instructions [here](https://www.jaegertracing.io/docs/1.49/operator/#installing-the-operator-on-kubernetes).
+
+Install Jaeger operator:
+```shell
+kubectl create namespace observability
+kubectl create -f https://github.com/jaegertracing/jaeger-operator/releases/download/v1.49.0/jaeger-operator.yaml -n observability
+```
+
 ## Setup Kafka
 
 Follow [Strimzi Kafka](https://strimzi.io/quickstarts/)
