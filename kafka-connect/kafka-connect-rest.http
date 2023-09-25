@@ -1,0 +1,47 @@
+@kafka-connect-url = http://localhost:8083
+
+###
+# Get health
+
+GET {{kafka-connect-url}}/
+Accept: application/json
+
+###
+# Get list of connectors
+
+GET {{kafka-connect-url}}/connectors
+Accept: application/json
+
+###
+# Create postgres connector
+
+POST {{kafka-connect-url}}/connectors
+Accept: application/json
+Content-Type: application/json
+
+{
+  "name": "pagila-connector",
+  "config": {
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+    "tasks.max": "1",
+    "database.hostname": "pagila",
+    "database.port": "5432",
+    "database.user": "postgres",
+    "database.password": "postgres",
+    "database.dbname" : "postgres",
+    "topic.prefix": "dbpagila",
+    "table.include.list": "public.film",
+    "plugin.name": "pgoutput"
+  }
+}
+
+###
+# Get pagila connector
+
+GET {{kafka-connect-url}}/connectors/pagila-connector
+Accept: application/json
+
+###
+# DELETE pagila-connector
+
+DELETE {{kafka-connect-url}}/connectors/pagila-connector
