@@ -31,7 +31,11 @@ Content-Type: application/json
     "database.dbname" : "postgres",
     "topic.prefix": "dbpagila",
     "table.include.list": "public.film",
-    "plugin.name": "pgoutput"
+    "plugin.name": "pgoutput",
+    "transforms": "filterUnchanged",
+    "transforms.filterUnchanged.type": "io.debezium.transforms.Filter",
+    "transforms.filterUnchanged.language": "jsr223.graalvm.js",
+    "transforms.filterUnchanged.condition": "value.op == 'u'"
   }
 }
 
