@@ -56,7 +56,9 @@ services:
 
   kafka-connect:
     container_name: kafcon-kafka-connect
-    image: confluentinc/cp-kafka-connect:7.3.0
+    build:
+      dockerfile: kafka-connect.Dockerfile
+      context: .
     ports:
       - "8083:8083"
     environment:

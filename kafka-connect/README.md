@@ -20,6 +20,23 @@ tables are not monitored.
 After that, change data in the `film` DB table with Postgres client like
 [pgAdmin] and check `dbpagila.public.film` topic with Kafka UI at http://localhost:8888/.
 
+## DB Table Replica Identity
+
+In order to have full `before` information in the
+message, the DB table must be in the `FULL`
+replication mode.
+
+Check table mode with
+```sql
+SELECT relname, relreplident
+FROM pg_class
+WHERE relname = 'film';
+```
+
+Set full with
+```sql
+ALTER TABLE film REPLICA IDENTITY FULL;
+```
 
 
 [Pagila]: https://github.com/devrimgunduz/pagila
