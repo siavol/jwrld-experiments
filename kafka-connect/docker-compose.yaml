@@ -41,19 +41,6 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
 
-  kafka-ui:
-    container_name: kafcon-kafka-ui
-    image: provectuslabs/kafka-ui:latest
-    ports:
-      - 8888:8080
-    depends_on:
-      - kafka
-      - zookeeper
-    environment:
-      DYNAMIC_CONFIG_ENABLED: 'true'
-      KAFKA_CLUSTERS_0_NAME: kafka
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
-
   kafka-connect:
     container_name: kafcon-kafka-connect
     build:
@@ -78,3 +65,20 @@ services:
       - pagila
       - kafka
       - zookeeper
+
+  kafka-ui:
+    container_name: kafcon-kafka-ui
+    image: provectuslabs/kafka-ui:latest
+    ports:
+      - 8888:8080
+    depends_on:
+      - kafka
+      - zookeeper
+    environment:
+      DYNAMIC_CONFIG_ENABLED: 'true'
+
+      KAFKA_CLUSTERS_0_NAME: kafka
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+
+      KAFKA_CLUSTERS_0_KAFKACONNECT_0_NAME: kafka-connect
+      KAFKA_CLUSTERS_0_KAFKACONNECT_0_ADDRESS: http://kafka-connect:8083
