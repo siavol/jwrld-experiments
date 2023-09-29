@@ -73,11 +73,17 @@ public abstract class FilterUnchanged<R extends ConnectRecord<R>>  implements Tr
         Struct before = value.getStruct(beforeFieldName);
         Struct after = value.getStruct(afterFieldName);
 
-        Object beforeValue = before.get(compareFields);
-        Object afterValue = after.get(compareFields);
+        String[] fields = compareFields.split(",");
+        for (String fieldName : fields) {
+            Object beforeValue = before.get(fieldName);
+            Object afterValue = after.get(fieldName);
 
-        boolean dataIsUnchanged = beforeValue.equals(afterValue);
-        return dataIsUnchanged ? null : record;
+            if (!beforeValue.equals(afterValue)) {
+                return record;
+            }
+        }
+
+        return null;
 
     }
 
