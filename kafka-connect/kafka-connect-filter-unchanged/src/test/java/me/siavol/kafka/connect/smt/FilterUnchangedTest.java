@@ -22,7 +22,10 @@ public class FilterUnchangedTest {
     public class RecordsWithSchema {
         @Test
         public void shouldReturnOriginalRecordWhenDataIsDifferent() {
-            filterUnchanged.configure(new HashMap<>());
+            filterUnchanged.configure(Map.of(
+                    "before.field.name", "v1",
+                    "after.field.name", "v2"
+            ));
 
             final Schema dataStruct = SchemaBuilder.struct()
                     .name("my-data")
@@ -30,12 +33,12 @@ public class FilterUnchangedTest {
                     .field("rating", Schema.OPTIONAL_STRING_SCHEMA)
                     .build();
 
-            final Schema simpleStructSchema = getSimpleStructSchema(dataStruct);
+            final Schema simpleStructSchema = getSimpleStructSchema(dataStruct, "v1", "v2");
             final Struct simpleStruct = new Struct(simpleStructSchema)
                     .put("magic", 42L)
-                    .put("before", new Struct(dataStruct)
+                    .put("v1", new Struct(dataStruct)
                             .put("rating", "G"))
-                    .put("after", new Struct(dataStruct)
+                    .put("v2", new Struct(dataStruct)
                             .put("rating", "PG"));
 
             final SourceRecord record = new SourceRecord(null, null, "test", 0, simpleStructSchema, simpleStruct);
@@ -54,7 +57,7 @@ public class FilterUnchangedTest {
                     .field("rating", Schema.OPTIONAL_STRING_SCHEMA)
                     .build();
 
-            final Schema simpleStructSchema = getSimpleStructSchema(dataStruct);
+            final Schema simpleStructSchema = getSimpleStructSchema(dataStruct, "before", "after");
             final Struct simpleStruct = new Struct(simpleStructSchema)
                     .put("magic", 42L)
                     .put("before", new Struct(dataStruct)
@@ -68,14 +71,14 @@ public class FilterUnchangedTest {
             Assertions.assertNull(transformedRecord);
         }
 
-        private Schema getSimpleStructSchema(Schema dataStruct) {
+        private Schema getSimpleStructSchema(Schema dataStruct, String before, String after) {
             return SchemaBuilder.struct()
                     .name("name")
                     .version(1)
                     .doc("doc")
                     .field("magic", Schema.OPTIONAL_INT64_SCHEMA)
-                    .field("before", dataStruct)
-                    .field("after", dataStruct)
+                    .field(before, dataStruct)
+                    .field(after, dataStruct)
                     .build();
         }
     }
