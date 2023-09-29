@@ -2,12 +2,14 @@ package me.siavol.kafka.connect.smt;
 
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.connector.ConnectRecord;
+import org.apache.kafka.connect.data.Field;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.transforms.Transformation;
 import org.apache.kafka.connect.transforms.util.SimpleConfig;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.apache.kafka.connect.transforms.util.Requirements.requireMap;
@@ -15,6 +17,7 @@ import static org.apache.kafka.connect.transforms.util.Requirements.requireStruc
 
 public abstract class FilterUnchanged<R extends ConnectRecord<R>>  implements Transformation<R> {
     public static final String OVERVIEW_DOC = "Filters unchanged messages";
+    private static final String ALL_FIELDS = "*";
 
     private interface ConfigName {
         String BEFORE_FIELD_NAME = "before.field.name";
@@ -25,7 +28,7 @@ public abstract class FilterUnchanged<R extends ConnectRecord<R>>  implements Tr
     public static final ConfigDef CONFIG_DEF = new ConfigDef()
             .define(ConfigName.BEFORE_FIELD_NAME, ConfigDef.Type.STRING, "before", ConfigDef.Importance.MEDIUM, "Field name for before state")
             .define(ConfigName.AFTER_FIELD_NAME, ConfigDef.Type.STRING, "after", ConfigDef.Importance.MEDIUM, "Field name for after state")
-            .define(ConfigName.COMPARE_FIELDS,ConfigDef.Type.STRING, "*", ConfigDef.Importance.MEDIUM, "Fields to be compared to identify unchanged.");
+            .define(ConfigName.COMPARE_FIELDS,ConfigDef.Type.STRING, ALL_FIELDS, ConfigDef.Importance.MEDIUM, "Fields to be compared to identify unchanged.");
 
     private static final String PURPOSE = "adding UUID to record";
 
@@ -73,7 +76,7 @@ public abstract class FilterUnchanged<R extends ConnectRecord<R>>  implements Tr
         Struct before = value.getStruct(beforeFieldName);
         Struct after = value.getStruct(afterFieldName);
 
-        String[] fields = compareFields.split(",");
+        String[] fields = getFieldsToCompare(before);
         for (String fieldName : fields) {
             Object beforeValue = before.get(fieldName);
             Object afterValue = after.get(fieldName);
@@ -84,7 +87,15 @@ public abstract class FilterUnchanged<R extends ConnectRecord<R>>  implements Tr
         }
 
         return null;
+    }
 
+    private String[] getFieldsToCompare(Struct before) {
+        Schema beforeSchema = before.schema();
+        List<Field> schemaFields = beforeSchema.fields();
+
+        return compareFields.equals(ALL_FIELDS)
+                ? schemaFields.stream().map(Field::name).toArray(String[]::new)
+                : compareFields.split(",");
     }
 
     protected abstract Schema operatingSchema(R record);
