@@ -32,10 +32,9 @@ Content-Type: application/json
     "topic.prefix": "dbpagila",
     "table.include.list": "public.film",
     "plugin.name": "pgoutput",
-    "transforms": "filterUnchanged",
-    "transforms.filterUnchanged.type": "io.debezium.transforms.Filter",
-    "transforms.filterUnchanged.language": "jsr223.graalvm.js",
-    "transforms.filterUnchanged.condition": "value.op == 'u'"
+    "transforms": "filter-unchanged",
+    "transforms.filter-unchanged.type": "me.siavol.kafka.connect.smt.FilterUnchanged$Value",
+    "transforms.filter-unchanged.uuid.field.name": "uuid"
   }
 }
 
