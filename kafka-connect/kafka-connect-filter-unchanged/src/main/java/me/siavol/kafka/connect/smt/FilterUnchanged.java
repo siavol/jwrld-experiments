@@ -19,16 +19,19 @@ public abstract class FilterUnchanged<R extends ConnectRecord<R>>  implements Tr
     private interface ConfigName {
         String BEFORE_FIELD_NAME = "before.field.name";
         String AFTER_FIELD_NAME = "after.field.name";
+        String COMPARE_FIELDS = "compare.fields";
     }
 
     public static final ConfigDef CONFIG_DEF = new ConfigDef()
             .define(ConfigName.BEFORE_FIELD_NAME, ConfigDef.Type.STRING, "before", ConfigDef.Importance.MEDIUM, "Field name for before state")
-            .define(ConfigName.AFTER_FIELD_NAME, ConfigDef.Type.STRING, "after", ConfigDef.Importance.MEDIUM, "Field name for after state");
+            .define(ConfigName.AFTER_FIELD_NAME, ConfigDef.Type.STRING, "after", ConfigDef.Importance.MEDIUM, "Field name for after state")
+            .define(ConfigName.COMPARE_FIELDS,ConfigDef.Type.STRING, "*", ConfigDef.Importance.MEDIUM, "Fields to be compared to identify unchanged.");
 
     private static final String PURPOSE = "adding UUID to record";
 
     private String beforeFieldName;
     private String afterFieldName;
+    private String compareFields;
 
     @Override
     public ConfigDef config() {
@@ -40,6 +43,7 @@ public abstract class FilterUnchanged<R extends ConnectRecord<R>>  implements Tr
         final SimpleConfig config = new SimpleConfig(CONFIG_DEF, props);
         beforeFieldName = config.getString(ConfigName.BEFORE_FIELD_NAME);
         afterFieldName = config.getString(ConfigName.AFTER_FIELD_NAME);
+        compareFields = config.getString(ConfigName.COMPARE_FIELDS);
     }
 
     @Override
@@ -60,7 +64,7 @@ public abstract class FilterUnchanged<R extends ConnectRecord<R>>  implements Tr
         final Map<String, Object> updatedValue = new HashMap<>(value);
 
         updatedValue.put("kafka-connect-filter-unchanged", "Schemaless records filtering is not supported.");
-        return newRecord(record, null, updatedValue);
+        return newRecord(record, updatedValue);
     }
 
     private R applyWithSchema(R record) {
@@ -69,20 +73,17 @@ public abstract class FilterUnchanged<R extends ConnectRecord<R>>  implements Tr
         Struct before = value.getStruct(beforeFieldName);
         Struct after = value.getStruct(afterFieldName);
 
-        Object beforeRating = before.get("rating");
-        Object afterRating = after.get("rating");
+        Object beforeValue = before.get(compareFields);
+        Object afterValue = after.get(compareFields);
 
-        if (beforeRating.equals(afterRating)) {
-            return null;
-        } else {
-            return record;
-        }
+        boolean dataIsUnchanged = beforeValue.equals(afterValue);
+        return dataIsUnchanged ? null : record;
 
     }
 
     protected abstract Schema operatingSchema(R record);
     protected abstract Object operatingValue(R record);
-    protected abstract R newRecord(R record, Schema updatedSchema, Object updatedValue);
+    protected abstract R newRecord(R record, Object updatedValue);
 
     public static class Value<R extends ConnectRecord<R>> extends FilterUnchanged<R> {
 
@@ -97,8 +98,8 @@ public abstract class FilterUnchanged<R extends ConnectRecord<R>>  implements Tr
         }
 
         @Override
-        protected R newRecord(R record, Schema updatedSchema, Object updatedValue) {
-            return record.newRecord(record.topic(), record.kafkaPartition(), record.keySchema(), record.key(), updatedSchema, updatedValue, record.timestamp());
+        protected R newRecord(R record, Object updatedValue) {
+            return record.newRecord(record.topic(), record.kafkaPartition(), record.keySchema(), record.key(), null, updatedValue, record.timestamp());
         }
     }
 }

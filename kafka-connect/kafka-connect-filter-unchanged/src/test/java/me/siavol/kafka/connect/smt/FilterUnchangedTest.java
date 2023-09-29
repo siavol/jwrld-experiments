@@ -24,7 +24,8 @@ public class FilterUnchangedTest {
         public void shouldReturnOriginalRecordWhenDataIsDifferent() {
             filterUnchanged.configure(Map.of(
                     "before.field.name", "v1",
-                    "after.field.name", "v2"
+                    "after.field.name", "v2",
+                    "compare.fields", "rating"
             ));
 
             final Schema dataStruct = SchemaBuilder.struct()
@@ -49,7 +50,9 @@ public class FilterUnchangedTest {
 
         @Test
         public void shouldReturnNullWhenDataIsUnchanged() {
-            filterUnchanged.configure(new HashMap<>());
+            filterUnchanged.configure(Map.of(
+                    "compare.fields", "rating"
+            ));
 
             final Schema dataStruct = SchemaBuilder.struct()
                     .name("my-data")
