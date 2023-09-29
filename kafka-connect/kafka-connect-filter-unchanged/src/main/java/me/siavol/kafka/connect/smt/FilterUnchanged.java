@@ -1,43 +1,34 @@
 package me.siavol.kafka.connect.smt;
 
-import org.apache.kafka.common.cache.Cache;
-import org.apache.kafka.common.cache.LRUCache;
-import org.apache.kafka.common.cache.SynchronizedCache;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.connector.ConnectRecord;
-import org.apache.kafka.connect.data.Field;
 import org.apache.kafka.connect.data.Schema;
-import org.apache.kafka.connect.data.SchemaBuilder;
 import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.transforms.Transformation;
-import org.apache.kafka.connect.transforms.util.SchemaUtil;
 import org.apache.kafka.connect.transforms.util.SimpleConfig;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 
 import static org.apache.kafka.connect.transforms.util.Requirements.requireMap;
 import static org.apache.kafka.connect.transforms.util.Requirements.requireStruct;
 
 public abstract class FilterUnchanged<R extends ConnectRecord<R>>  implements Transformation<R> {
-
-    public static final String OVERVIEW_DOC =
-            "Insert a random UUID into a connect record";
+    public static final String OVERVIEW_DOC = "Filters unchanged messages";
 
     private interface ConfigName {
-        String UUID_FIELD_NAME = "uuid.field.name";
+        String BEFORE_FIELD_NAME = "before.field.name";
+        String AFTER_FIELD_NAME = "after.field.name";
     }
 
     public static final ConfigDef CONFIG_DEF = new ConfigDef()
-            .define(ConfigName.UUID_FIELD_NAME, ConfigDef.Type.STRING, "uuid", ConfigDef.Importance.HIGH,
-                    "Field name for UUID");
+            .define(ConfigName.BEFORE_FIELD_NAME, ConfigDef.Type.STRING, "before", ConfigDef.Importance.MEDIUM, "Field name for before state")
+            .define(ConfigName.AFTER_FIELD_NAME, ConfigDef.Type.STRING, "after", ConfigDef.Importance.MEDIUM, "Field name for after state");
 
     private static final String PURPOSE = "adding UUID to record";
 
-    private String fieldName = "testId";
-
-    private Cache<Schema, Schema> schemaUpdateCache;
+    private String beforeFieldName;
+    private String afterFieldName;
 
     @Override
     public ConfigDef config() {
@@ -47,9 +38,8 @@ public abstract class FilterUnchanged<R extends ConnectRecord<R>>  implements Tr
     @Override
     public void configure(Map<String, ?> props) {
         final SimpleConfig config = new SimpleConfig(CONFIG_DEF, props);
-        fieldName = config.getString(ConfigName.UUID_FIELD_NAME);
-
-        schemaUpdateCache = new SynchronizedCache<>(new LRUCache<Schema, Schema>(16));
+        beforeFieldName = config.getString(ConfigName.BEFORE_FIELD_NAME);
+        afterFieldName = config.getString(ConfigName.AFTER_FIELD_NAME);
     }
 
     @Override
@@ -63,54 +53,31 @@ public abstract class FilterUnchanged<R extends ConnectRecord<R>>  implements Tr
 
     @Override
     public void close() {
-        schemaUpdateCache = null;
     }
-
 
     private R applySchemaless(R record) {
         final Map<String, Object> value = requireMap(operatingValue(record), PURPOSE);
-
         final Map<String, Object> updatedValue = new HashMap<>(value);
 
-        updatedValue.put(fieldName, getRandomUuid());
-
+        updatedValue.put("kafka-connect-filter-unchanged", "Schemaless records filtering is not supported.");
         return newRecord(record, null, updatedValue);
     }
 
     private R applyWithSchema(R record) {
         final Struct value = requireStruct(operatingValue(record), PURPOSE);
 
-        Schema updatedSchema = schemaUpdateCache.get(value.schema());
-        if(updatedSchema == null) {
-            updatedSchema = makeUpdatedSchema(value.schema());
-            schemaUpdateCache.put(value.schema(), updatedSchema);
+        Struct before = value.getStruct(beforeFieldName);
+        Struct after = value.getStruct(afterFieldName);
+
+        Object beforeRating = before.get("rating");
+        Object afterRating = after.get("rating");
+
+        if (beforeRating.equals(afterRating)) {
+            return null;
+        } else {
+            return record;
         }
 
-        final Struct updatedValue = new Struct(updatedSchema);
-
-        for (Field field : value.schema().fields()) {
-            updatedValue.put(field.name(), value.get(field));
-        }
-
-        updatedValue.put(fieldName, getRandomUuid());
-
-        return newRecord(record, updatedSchema, updatedValue);
-    }
-
-    private Schema makeUpdatedSchema(Schema schema) {
-        final SchemaBuilder builder = SchemaUtil.copySchemaBasics(schema, SchemaBuilder.struct());
-
-        for (Field field: schema.fields()) {
-            builder.field(field.name(), field.schema());
-        }
-
-        builder.field(fieldName, Schema.STRING_SCHEMA);
-
-        return builder.build();
-    }
-
-    private String getRandomUuid() {
-        return UUID.randomUUID().toString();
     }
 
     protected abstract Schema operatingSchema(R record);
