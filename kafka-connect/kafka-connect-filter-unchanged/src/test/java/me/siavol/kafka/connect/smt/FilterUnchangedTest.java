@@ -164,6 +164,39 @@ public class FilterUnchangedTest {
             Assertions.assertSame(record, transformedRecord);
         }
 
+        @Test
+        public void shouldReturnOriginalRecordWhenDataIsDifferentInIgnoredField() {
+            Map<String, String> configurationMap = new HashMap<>();
+            configurationMap.put("compare.fields", "*");
+            configurationMap.put("ignore.fields", "deleted");
+            filterUnchanged.configure(configurationMap);
+
+            final Schema dataStruct = SchemaBuilder.struct()
+                    .name("my-data")
+                    .version(1)
+                    .field("rating", Schema.OPTIONAL_INT64_SCHEMA)
+                    .field("name", Schema.OPTIONAL_STRING_SCHEMA)
+                    .field("deleted", Schema.OPTIONAL_BOOLEAN_SCHEMA)
+                    .build();
+
+            final Schema simpleStructSchema = getSimpleStructSchema(dataStruct, "before", "after");
+            final Struct simpleStruct = new Struct(simpleStructSchema)
+                    .put("magic", 42L)
+                    .put("before", new Struct(dataStruct)
+                            .put("rating", 42L)
+                            .put("name", "Alex")
+                            .put("deleted", false))
+                    .put("after", new Struct(dataStruct)
+                            .put("rating", 42L)
+                            .put("name", "Alex")
+                            .put("deleted", true));
+
+            final SourceRecord record = new SourceRecord(null, null, "test", 0, simpleStructSchema, simpleStruct);
+            final SourceRecord transformedRecord = filterUnchanged.apply(record);
+
+            Assertions.assertNull(transformedRecord);
+        }
+
         private Schema getSimpleStructSchema(Schema dataStruct, String before, String after) {
             return SchemaBuilder.struct()
                     .name("name")

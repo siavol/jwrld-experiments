@@ -8,9 +8,8 @@ import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.transforms.Transformation;
 import org.apache.kafka.connect.transforms.util.SimpleConfig;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import static org.apache.kafka.connect.transforms.util.Requirements.requireMap;
 import static org.apache.kafka.connect.transforms.util.Requirements.requireStruct;
@@ -23,18 +22,21 @@ public abstract class FilterUnchanged<R extends ConnectRecord<R>>  implements Tr
         String BEFORE_FIELD_NAME = "before.field.name";
         String AFTER_FIELD_NAME = "after.field.name";
         String COMPARE_FIELDS = "compare.fields";
+        String IGNORE_FIELDS = "ignore.fields";
     }
 
     public static final ConfigDef CONFIG_DEF = new ConfigDef()
-            .define(ConfigName.BEFORE_FIELD_NAME, ConfigDef.Type.STRING, "before", ConfigDef.Importance.MEDIUM, "Field name for before state")
-            .define(ConfigName.AFTER_FIELD_NAME, ConfigDef.Type.STRING, "after", ConfigDef.Importance.MEDIUM, "Field name for after state")
-            .define(ConfigName.COMPARE_FIELDS,ConfigDef.Type.STRING, ALL_FIELDS, ConfigDef.Importance.MEDIUM, "Fields to be compared to identify unchanged.");
+            .define(ConfigName.BEFORE_FIELD_NAME, ConfigDef.Type.STRING, "before", ConfigDef.Importance.MEDIUM, "Field name for before state.")
+            .define(ConfigName.AFTER_FIELD_NAME, ConfigDef.Type.STRING, "after", ConfigDef.Importance.MEDIUM, "Field name for after state.")
+            .define(ConfigName.COMPARE_FIELDS, ConfigDef.Type.STRING, ALL_FIELDS, ConfigDef.Importance.MEDIUM, "Fields to be compared to identify unchanged.")
+            .define(ConfigName.IGNORE_FIELDS, ConfigDef.Type.STRING, "", ConfigDef.Importance.MEDIUM, "Fields to be ignored to identify unchanged.");
 
     private static final String PURPOSE = "adding UUID to record";
 
     private String beforeFieldName;
     private String afterFieldName;
     private String compareFields;
+    private String ignoreFields;
 
     @Override
     public ConfigDef config() {
@@ -47,6 +49,7 @@ public abstract class FilterUnchanged<R extends ConnectRecord<R>>  implements Tr
         beforeFieldName = config.getString(ConfigName.BEFORE_FIELD_NAME);
         afterFieldName = config.getString(ConfigName.AFTER_FIELD_NAME);
         compareFields = config.getString(ConfigName.COMPARE_FIELDS);
+        ignoreFields = config.getString(ConfigName.IGNORE_FIELDS);
     }
 
     @Override
@@ -76,8 +79,14 @@ public abstract class FilterUnchanged<R extends ConnectRecord<R>>  implements Tr
         Struct before = value.getStruct(beforeFieldName);
         Struct after = value.getStruct(afterFieldName);
 
-        String[] fields = getFieldsToCompare(before);
-        for (String fieldName : fields) {
+        String[] fieldsToCompare = getFieldsToCompare(before);
+        Set<String> fieldsToIgnore = Arrays.stream(ignoreFields.split(",")).collect(Collectors.toSet());
+
+        for (String fieldName : fieldsToCompare) {
+            if (fieldsToIgnore.contains(fieldName)) {
+                continue;
+            }
+
             Object beforeValue = before.get(fieldName);
             Object afterValue = after.get(fieldName);
 
