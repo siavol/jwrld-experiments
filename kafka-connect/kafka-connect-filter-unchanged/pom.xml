@@ -10,7 +10,7 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <java.version>11</java.version>
-        <kafkaconnect.version>2.1.1</kafkaconnect.version>
+        <kafkaconnect.version>3.5.1</kafkaconnect.version>
         <confluent.version>5.1.1</confluent.version>
     </properties>
 
@@ -41,7 +41,7 @@
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
-            <version>1.7.32</version>
+            <version>1.7.36</version>
         </dependency>
 
         <dependency>
