@@ -1,0 +1,84 @@
+version: "3"
+
+services:
+  pagila:
+    container_name: kafcon-pagila
+    image: postgres:13.2
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+    volumes:
+      - ./pagila/pagila-schema.sql:/docker-entrypoint-initdb.d/1-pagila-schema.sql
+      - ./pagila/pagila-data.sql:/docker-entrypoint-initdb.d/2-pagila-data.sql
+    expose:
+      - 5432
+    ports:
+      - 5432:5432
+    command: [ "postgres", "-c", "wal_level=logical" ] # wal_level logical is required for kafka connect
+
+  zookeeper:
+    container_name: kafcon-zookeeper
+    image: confluentinc/cp-zookeeper:7.3.0
+    hostname: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  kafka:
+    container_name: kafcon-kafka
+    image: confluentinc/cp-kafka:7.3.0
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://kafka:29092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+
+  kafka-connect:
+    container_name: kafcon-kafka-connect
+    build:
+      dockerfile: kafka-connect.Dockerfile
+      context: .
+    ports:
+      - "8083:8083"
+    environment:
+      CONNECT_BOOTSTRAP_SERVERS: kafka:29092
+      CONNECT_REST_PORT: 8083
+      CONNECT_GROUP_ID: kafka-connect
+      CONNECT_CONFIG_STORAGE_TOPIC: kafka-connect-configs
+      CONNECT_OFFSET_STORAGE_TOPIC: kafka-connect-offsets
+      CONNECT_STATUS_STORAGE_TOPIC: kafka-connect-status
+      CONNECT_KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      CONNECT_VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      CONNECT_REST_ADVERTISED_HOST_NAME: "kafka-connect"
+      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: "1"
+      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: "1"
+      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: "1"
+    depends_on:
+      - pagila
+      - kafka
+      - zookeeper
+
+  kafka-ui:
+    container_name: kafcon-kafka-ui
+    image: provectuslabs/kafka-ui:latest
+    ports:
+      - 8888:8080
+    depends_on:
+      - kafka
+      - zookeeper
+    environment:
+      DYNAMIC_CONFIG_ENABLED: 'true'
+
+      KAFKA_CLUSTERS_0_NAME: kafka
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+
+      KAFKA_CLUSTERS_0_KAFKACONNECT_0_NAME: kafka-connect
+      KAFKA_CLUSTERS_0_KAFKACONNECT_0_ADDRESS: http://kafka-connect:8083
