@@ -7,6 +7,8 @@ import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.transforms.Transformation;
 import org.apache.kafka.connect.transforms.util.SimpleConfig;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -15,6 +17,7 @@ import static org.apache.kafka.connect.transforms.util.Requirements.requireMap;
 import static org.apache.kafka.connect.transforms.util.Requirements.requireStruct;
 
 public abstract class FilterUnchanged<R extends ConnectRecord<R>>  implements Transformation<R> {
+    private static final Logger logger = LoggerFactory.getLogger(FilterUnchanged.class);
     public static final String OVERVIEW_DOC = "Filters unchanged messages";
     private static final String ALL_FIELDS = "*";
 
@@ -54,10 +57,16 @@ public abstract class FilterUnchanged<R extends ConnectRecord<R>>  implements Tr
 
     @Override
     public R apply(R record) {
-        if (operatingSchema(record) == null) {
-            return applySchemaless(record);
-        } else {
-            return applyWithSchema(record);
+        logger.debug("Applying record");
+        try {
+            if (operatingSchema(record) == null) {
+                return applySchemaless(record);
+            } else {
+                return applyWithSchema(record);
+            }
+        } catch (Exception e) {
+            logger.error("Failed to apply filter unchanged", e);
+            throw e;
         }
     }
 
@@ -66,6 +75,7 @@ public abstract class FilterUnchanged<R extends ConnectRecord<R>>  implements Tr
     }
 
     private R applySchemaless(R record) {
+        logger.info("Applying schemaless");
         final Map<String, Object> value = requireMap(operatingValue(record), PURPOSE);
         final Map<String, Object> updatedValue = new HashMap<>(value);
 
@@ -74,28 +84,45 @@ public abstract class FilterUnchanged<R extends ConnectRecord<R>>  implements Tr
     }
 
     private R applyWithSchema(R record) {
+        logger.debug("Applying with schema");
         final Struct value = requireStruct(operatingValue(record), PURPOSE);
 
         Struct before = value.getStruct(beforeFieldName);
         Struct after = value.getStruct(afterFieldName);
 
         String[] fieldsToCompare = getFieldsToCompare(before);
+        logger.debug("Fields to compare " + Arrays.toString(fieldsToCompare));
         Set<String> fieldsToIgnore = Arrays.stream(ignoreFields.split(",")).collect(Collectors.toSet());
+        logger.debug("Fields to ignore " + fieldsToIgnore);
 
         for (String fieldName : fieldsToCompare) {
             if (fieldsToIgnore.contains(fieldName)) {
+                logger.debug("Ignore field " + fieldName);
                 continue;
             }
-
-            Object beforeValue = before.get(fieldName);
-            Object afterValue = after.get(fieldName);
-
-            if (!beforeValue.equals(afterValue)) {
+            boolean valuesAreDifferent = isValuesAreDifferent(fieldName, before, after);
+            if (valuesAreDifferent) {
+                logger.debug("Changes in the field " + fieldName);
                 return record;
             }
         }
 
+        logger.debug("Data is unchanged");
         return null;
+    }
+
+    private static boolean isValuesAreDifferent(String fieldName, Struct before, Struct after) {
+        try {
+            logger.info("Compare field " + fieldName);
+
+            Object beforeValue = before.get(fieldName);
+            Object afterValue = after.get(fieldName);
+
+            return !beforeValue.equals(afterValue);
+        } catch (Exception e) {
+            logger.error("Failed to compare field values " + fieldName, e);
+            throw e;
+        }
     }
 
     private String[] getFieldsToCompare(Struct before) {

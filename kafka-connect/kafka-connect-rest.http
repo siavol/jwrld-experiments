@@ -34,7 +34,10 @@ Content-Type: application/json
     "plugin.name": "pgoutput",
     "transforms": "filter-unchanged",
     "transforms.filter-unchanged.type": "me.siavol.kafka.connect.smt.FilterUnchanged$Value",
-    "transforms.filter-unchanged.uuid.field.name": "uuid"
+    "transforms.filter-unchanged.before.field.name": "before",
+    "transforms.filter-unchanged.after.field.name": "after",
+    "transforms.filter-unchanged.compare.fields": "film_id,title,description,release_year,language_id,original_language_id,rental_duration,rental_rate,length,replacement_cost,rating,special_features",
+    "transforms.filter-unchanged.ignore.fields": ""
   }
 }
 
