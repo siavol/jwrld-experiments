@@ -118,7 +118,11 @@ public abstract class FilterUnchanged<R extends ConnectRecord<R>>  implements Tr
             Object beforeValue = before.get(fieldName);
             Object afterValue = after.get(fieldName);
 
-            return !beforeValue.equals(afterValue);
+            if (beforeValue != null) {
+                return !beforeValue.equals(afterValue);
+            } else {
+                return afterValue != null;
+            }
         } catch (Exception e) {
             logger.error("Failed to compare field values " + fieldName, e);
             throw e;

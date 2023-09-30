@@ -197,6 +197,84 @@ public class FilterUnchangedTest {
             Assertions.assertNull(transformedRecord);
         }
 
+        @Test
+        public void shouldReturnNullWhenBothValuesAreNull() {
+            Map<String, String> configurationMap = new HashMap<>();
+            configurationMap.put("compare.fields", "rating");
+            filterUnchanged.configure(configurationMap);
+
+            final Schema dataStruct = SchemaBuilder.struct()
+                    .name("my-data")
+                    .version(1)
+                    .field("rating", Schema.OPTIONAL_STRING_SCHEMA)
+                    .build();
+
+            final Schema simpleStructSchema = getSimpleStructSchema(dataStruct, "before", "after");
+            final Struct simpleStruct = new Struct(simpleStructSchema)
+                    .put("magic", 42L)
+                    .put("before", new Struct(dataStruct)
+                            .put("rating", null))
+                    .put("after", new Struct(dataStruct)
+                            .put("rating", null));
+
+            final SourceRecord record = new SourceRecord(null, null, "test", 0, simpleStructSchema, simpleStruct);
+            final SourceRecord transformedRecord = filterUnchanged.apply(record);
+
+            Assertions.assertNull(transformedRecord);
+        }
+
+        @Test
+        public void shouldReturnOriginalRecordWhenBeforeIsNullAndAfterIsNotNull() {
+            Map<String, String> configurationMap = new HashMap<>();
+            configurationMap.put("compare.fields", "rating");
+            filterUnchanged.configure(configurationMap);
+
+            final Schema dataStruct = SchemaBuilder.struct()
+                    .name("my-data")
+                    .version(1)
+                    .field("rating", Schema.OPTIONAL_STRING_SCHEMA)
+                    .build();
+
+            final Schema simpleStructSchema = getSimpleStructSchema(dataStruct, "before", "after");
+            final Struct simpleStruct = new Struct(simpleStructSchema)
+                    .put("magic", 42L)
+                    .put("before", new Struct(dataStruct)
+                            .put("rating", null))
+                    .put("after", new Struct(dataStruct)
+                            .put("rating", "PG"));
+
+            final SourceRecord record = new SourceRecord(null, null, "test", 0, simpleStructSchema, simpleStruct);
+            final SourceRecord transformedRecord = filterUnchanged.apply(record);
+
+            Assertions.assertSame(record, transformedRecord);
+        }
+
+        @Test
+        public void shouldReturnOriginalRecordWhenBeforeIsNotNullAndAfterIsNull() {
+            Map<String, String> configurationMap = new HashMap<>();
+            configurationMap.put("compare.fields", "rating");
+            filterUnchanged.configure(configurationMap);
+
+            final Schema dataStruct = SchemaBuilder.struct()
+                    .name("my-data")
+                    .version(1)
+                    .field("rating", Schema.OPTIONAL_STRING_SCHEMA)
+                    .build();
+
+            final Schema simpleStructSchema = getSimpleStructSchema(dataStruct, "before", "after");
+            final Struct simpleStruct = new Struct(simpleStructSchema)
+                    .put("magic", 42L)
+                    .put("before", new Struct(dataStruct)
+                            .put("rating", "PG"))
+                    .put("after", new Struct(dataStruct)
+                            .put("rating", null));
+
+            final SourceRecord record = new SourceRecord(null, null, "test", 0, simpleStructSchema, simpleStruct);
+            final SourceRecord transformedRecord = filterUnchanged.apply(record);
+
+            Assertions.assertSame(record, transformedRecord);
+        }
+
         private Schema getSimpleStructSchema(Schema dataStruct, String before, String after) {
             return SchemaBuilder.struct()
                     .name("name")
